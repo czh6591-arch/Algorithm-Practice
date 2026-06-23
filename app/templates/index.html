@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线算法练习平台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: white; color: #1a1a1a; }
+        header { background: #1a1a1a; padding: 1rem 5%; color: white; }
+        .nav { display: flex; justify-content: space-between; align-items: center; }
+        .nav-links { display: flex; gap: 2rem; }
+        .nav-links a { color: white; text-decoration: none; }
+        .nav-links button { background: none; border: 1px solid #6ab7ff; color: #6ab7ff; padding: 0.5rem 1rem; cursor: pointer; border-radius: 5px; }
+        .nav-links button:hover { background: #6ab7ff; color: white; }
+        .main-content { padding: 2rem 5%; }
+        .tabs { display: flex; gap: 1rem; margin-bottom: 2rem; }
+        .tab { padding: 1rem 2rem; background: #f5f5f5; border: 1px solid #ddd; cursor: pointer; font-size: 1rem; border-radius: 5px; color: #333; }
+        .tab.active { background: #6ab7ff; color: white; border-color: #6ab7ff; }
+        .section { display: none; }
+        .section.active { display: block; }
+        .problem-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+        .problem-card { border: 1px solid #e0e0e0; padding: 1.5rem; border-radius: 10px; cursor: pointer; transition: transform 0.2s; background: white; }
+        .problem-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(106, 183, 255, 0.2); border-color: #6ab7ff; }
+        .difficulty { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 20px; font-size: 0.8rem; }
+        .easy { background: #e8f5e9; color: #2e7d32; }
+        .medium { background: #fff3e0; color: #e65100; }
+        .hard { background: #ffebee; color: #c62828; }
+        .pass-rate { color: #666; font-size: 0.9rem; }
+        .tutorial-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem; }
+        .tutorial-card { border: 1px solid #e0e0e0; padding: 1.5rem; border-radius: 10px; background: white; }
+        .tutorial-card iframe { width: 100%; height: 200px; border: none; }
+        .category-tabs { display: flex; gap: 1rem; margin-bottom: 1rem; }
+        .category-tab { padding: 0.5rem 1rem; background: #f5f5f5; border: 1px solid #ddd; cursor: pointer; border-radius: 5px; color: #333; }
+        .category-tab.active { background: #6ab7ff; color: white; border-color: #6ab7ff; }
+        .login-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 2rem; border-radius: 10px; width: 90%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .modal-content input { width: 100%; padding: 0.8rem; margin: 0.5rem 0; border: 1px solid #ddd; border-radius: 5px; background: #fafafa; }
+        .modal-content button { width: 100%; padding: 0.8rem; background: #6ab7ff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .modal-content button:hover { background: #5aa0e6; }
+        .close-btn { float: right; font-size: 1.5rem; cursor: pointer; color: #666; }
+        .user-info { display: flex; align-items: center; gap: 1rem; }
+        .avatar-small { width: 32px; height: 32px; border-radius: 50%; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="nav">
+            <div class="logo">
+                <h1>算法练习平台</h1>
+            </div>
+            <div class="nav-links">
+                <a href="#" id="home-link">首页</a>
+                <a href="#" id="tutorials-link">算法教程</a>
+                <a href="#" id="profile-link">个人中心</a>
+                <div id="auth-buttons">
+                    <button id="login-btn">登录</button>
+                    <button id="register-btn">注册</button>
+                </div>
+                <div id="user-info" style="display: none;" class="user-info">
+                    <img id="user-avatar" class="avatar-small" src="/static/avatars/default.svg" alt="头像">
+                    <span id="username"></span>
+                    <button id="logout-btn">退出</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-content">
+        <div class="tabs">
+            <button class="tab active" id="problems-tab">算法练习题</button>
+            <button class="tab" id="tutorials-section-tab">算法教程</button>
+        </div>
+
+        <div class="section active" id="problems-section">
+            <div class="category-tabs">
+                <button class="category-tab active" data-category="">全部</button>
+                <button class="category-tab" data-category="简单">简单</button>
+                <button class="category-tab" data-category="中等">中等</button>
+                <button class="category-tab" data-category="困难">困难</button>
+            </div>
+            <div class="problem-grid" id="problem-grid"></div>
+        </div>
+
+        <div class="section" id="tutorials-section">
+            <div class="category-tabs">
+                <button class="category-tab active" data-tutorial-category="排序算法">排序算法</button>
+                <button class="category-tab" data-tutorial-category="数据结构">数据结构</button>
+                <button class="category-tab" data-tutorial-category="进阶算法">进阶算法</button>
+            </div>
+            <div class="tutorial-grid" id="tutorial-grid"></div>
+        </div>
+    </div>
+
+    <div class="login-modal" id="login-modal">
+        <div class="modal-content">
+            <span class="close-btn" id="login-close">&times;</span>
+            <h2>登录</h2>
+            <input type="text" id="login-username" placeholder="用户名">
+            <input type="password" id="login-password" placeholder="密码">
+            <button id="login-submit">登录</button>
+            <p id="login-error" style="color: red; margin-top: 1rem;"></p>
+        </div>
+    </div>
+
+    <div class="login-modal" id="register-modal">
+        <div class="modal-content">
+            <span class="close-btn" id="register-close">&times;</span>
+            <h2>注册</h2>
+            <input type="text" id="register-username" placeholder="用户名">
+            <input type="email" id="register-email" placeholder="邮箱">
+            <input type="password" id="register-password" placeholder="密码（至少8位）">
+            <button id="register-submit">注册</button>
+            <p id="register-error" style="color: red; margin-top: 1rem;"></p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let token = localStorage.getItem('token');
+
+        function showLoginModal() {
+            document.getElementById('login-modal').style.display = 'flex';
+        }
+
+        function showRegisterModal() {
+            document.getElementById('register-modal').style.display = 'flex';
+        }
+
+        function hideModals() {
+            document.getElementById('login-modal').style.display = 'none';
+            document.getElementById('register-modal').style.display = 'none';
+        }
+
+        async function login() {
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            
+            const response = await fetch(`${API_BASE}/token`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `username=${username}&password=${password}`
+            });
+            
+            const data = await response.json();
+            if (response.ok) {
+                token = data.access_token;
+                localStorage.setItem('token', token);
+                hideModals();
+                updateAuthUI();
+            } else {
+                document.getElementById('login-error').textContent = data.detail || '登录失败';
+            }
+        }
+
+        async function register() {
+            const username = document.getElementById('register-username').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            
+            const response = await fetch(`${API_BASE}/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, email, password })
+            });
+            
+            const data = await response.json();
+            if (response.ok) {
+                alert('注册成功，请登录');
+                hideModals();
+            } else {
+                document.getElementById('register-error').textContent = data.detail || '注册失败';
+            }
+        }
+
+        function logout() {
+            token = null;
+            localStorage.removeItem('token');
+            updateAuthUI();
+        }
+
+        async function updateAuthUI() {
+            if (token) {
+                document.getElementById('auth-buttons').style.display = 'none';
+                document.getElementById('user-info').style.display = 'flex';
+                
+                const response = await fetch(`${API_BASE}/users/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const user = await response.json();
+                    document.getElementById('username').textContent = user.username;
+                    document.getElementById('user-avatar').src = user.avatar_url || '/static/avatars/default.png';
+                }
+            } else {
+                document.getElementById('auth-buttons').style.display = 'flex';
+                document.getElementById('user-info').style.display = 'none';
+            }
+        }
+
+        async function loadProblems(category = '') {
+            const url = category ? `${API_BASE}/problems?difficulty=${category}` : `${API_BASE}/problems`;
+            const response = await fetch(url);
+            const problems = await response.json();
+            
+            const grid = document.getElementById('problem-grid');
+            grid.innerHTML = problems.map(p => `
+                <div class="problem-card" onclick="openProblem(${p.id})">
+                    <h3>${p.title}</h3>
+                    <span class="difficulty ${p.difficulty === '简单' ? 'easy' : p.difficulty === '中等' ? 'medium' : 'hard'}">${p.difficulty}</span>
+                    <p class="pass-rate">通过率: ${p.pass_rate}%</p>
+                </div>
+            `).join('');
+        }
+
+        async function loadTutorials(category = '排序算法') {
+            const response = await fetch(`${API_BASE}/tutorials?category=${category}`);
+            const tutorials = await response.json();
+            
+            const grid = document.getElementById('tutorial-grid');
+            grid.innerHTML = tutorials.map(t => `
+                <div class="tutorial-card">
+                    <h3>${t.title}</h3>
+                    <p>${t.content}</p>
+                    <iframe src="${t.video_url}" allowfullscreen></iframe>
+                </div>
+            `).join('');
+        }
+
+        function openProblem(id) {
+            if (!token) {
+                alert('请先登录后再进行练习');
+                showLoginModal();
+                return;
+            }
+            window.location.href = `/problem/${id}`;
+        }
+
+        document.getElementById('login-btn').addEventListener('click', showLoginModal);
+        document.getElementById('register-btn').addEventListener('click', showRegisterModal);
+        document.getElementById('login-close').addEventListener('click', hideModals);
+        document.getElementById('register-close').addEventListener('click', hideModals);
+        document.getElementById('login-submit').addEventListener('click', login);
+        document.getElementById('register-submit').addEventListener('click', register);
+        document.getElementById('logout-btn').addEventListener('click', logout);
+
+        document.getElementById('problems-tab').addEventListener('click', () => {
+            document.getElementById('problems-tab').classList.add('active');
+            document.getElementById('tutorials-section-tab').classList.remove('active');
+            document.getElementById('problems-section').classList.add('active');
+            document.getElementById('tutorials-section').classList.remove('active');
+        });
+
+        document.getElementById('tutorials-section-tab').addEventListener('click', () => {
+            document.getElementById('tutorials-section-tab').classList.add('active');
+            document.getElementById('problems-tab').classList.remove('active');
+            document.getElementById('tutorials-section').classList.add('active');
+            document.getElementById('problems-section').classList.remove('active');
+        });
+
+        document.getElementById('tutorials-link').addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('tutorials-section-tab').click();
+        });
+
+        document.getElementById('home-link').addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('problems-tab').click();
+        });
+
+        document.getElementById('profile-link').addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = '/profile';
+        });
+
+        document.querySelectorAll('.category-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                if (tab.dataset.category !== undefined) {
+                    loadProblems(tab.dataset.category);
+                } else if (tab.dataset.tutorialCategory !== undefined) {
+                    loadTutorials(tab.dataset.tutorialCategory);
+                }
+            });
+        });
+
+        updateAuthUI();
+        loadProblems();
+    </script>
+</body>
+</html>

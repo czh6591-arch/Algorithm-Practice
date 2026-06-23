@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>题目详情 - 算法练习平台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: white; color: #1a1a1a; }
+        header { background: #1a1a1a; padding: 1rem 5%; color: white; }
+        .nav { display: flex; justify-content: space-between; align-items: center; }
+        .nav-links { display: flex; gap: 2rem; }
+        .nav-links a { color: white; text-decoration: none; }
+        .nav-links button { background: none; border: 1px solid #6ab7ff; color: #6ab7ff; padding: 0.5rem 1rem; cursor: pointer; border-radius: 5px; }
+        .nav-links button:hover { background: #6ab7ff; color: white; }
+        .main-content { padding: 2rem 5%; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+        .problem-section { border: 1px solid #e0e0e0; padding: 2rem; border-radius: 10px; background: white; }
+        .difficulty { display: inline-block; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.9rem; }
+        .easy { background: #e8f5e9; color: #2e7d32; }
+        .medium { background: #fff3e0; color: #e65100; }
+        .hard { background: #ffebee; color: #c62828; }
+        .sample-box { background: #f8f9fa; padding: 1rem; margin: 1rem 0; border-radius: 5px; font-family: monospace; }
+        .code-editor { width: 100%; height: 300px; font-family: monospace; font-size: 14px; padding: 1rem; border: 1px solid #ddd; border-radius: 5px; background: #fafafa; }
+        .submit-btn { background: #6ab7ff; color: white; padding: 0.8rem 2rem; border: none; border-radius: 5px; cursor: pointer; margin-top: 1rem; }
+        .submit-btn:hover { background: #5aa0e6; }
+        .console { background: #1a1a1a; color: #d4d4d4; padding: 1rem; height: 200px; overflow-y: auto; border-radius: 5px; margin-top: 1rem; }
+        .status-passed { color: #4caf50; }
+        .status-failed { color: #f44336; }
+        .user-info { display: flex; align-items: center; gap: 1rem; }
+        .avatar-small { width: 32px; height: 32px; border-radius: 50%; }
+        .complexity-info { margin-top: 1rem; padding: 1rem; background: #e8f4fc; border-radius: 5px; border: 1px solid #b3d9f5; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="nav">
+            <div class="logo">
+                <a href="/" style="color: white; text-decoration: none;"><h1>算法练习平台</h1></a>
+            </div>
+            <div class="nav-links">
+                <a href="/">首页</a>
+                <a href="/tutorials-page">算法教程</a>
+                <a href="/profile">个人中心</a>
+                <div id="auth-buttons">
+                    <button id="login-btn">登录</button>
+                    <button id="register-btn">注册</button>
+                </div>
+                <div id="user-info" style="display: none;" class="user-info">
+                    <img id="user-avatar" class="avatar-small" src="/static/avatars/default.svg" alt="头像">
+                    <span id="username"></span>
+                    <button id="logout-btn">退出</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-content">
+        <div class="problem-section">
+            <h2 id="problem-title"></h2>
+            <span id="problem-difficulty" class="difficulty"></span>
+            <p id="problem-description" style="margin-top: 1rem;"></p>
+            
+            <h3 style="margin-top: 1.5rem;">输入格式</h3>
+            <p id="input-format"></p>
+            
+            <h3 style="margin-top: 1rem;">输出格式</h3>
+            <p id="output-format"></p>
+            
+            <h3 style="margin-top: 1rem;">输入样例</h3>
+            <div id="sample-inputs"></div>
+            
+            <h3 style="margin-top: 1rem;">输出样例</h3>
+            <div id="sample-outputs"></div>
+            
+            <h3 style="margin-top: 1rem;">数据范围</h3>
+            <p id="constraints"></p>
+            
+            <div id="complexity-info" class="complexity-info" style="display: none;">
+                <h4>算法复杂度要求</h4>
+                <p>时间复杂度: <span id="time-complexity"></span></p>
+                <p>空间复杂度: <span id="space-complexity"></span></p>
+            </div>
+        </div>
+
+        <div class="problem-section">
+            <h3>代码编辑器</h3>
+            <textarea class="code-editor" id="code-editor" placeholder="请输入Python代码...">
+class Solution:
+    def solve(self):
+        # 在此编写你的代码
+        pass
+
+if __name__ == "__main__":
+    sol = Solution()
+    sol.solve()
+            </textarea>
+            <button class="submit-btn" id="submit-btn">提交</button>
+            
+            <div class="console" id="console">
+                <p>控制台输出...</p>
+            </div>
+            
+            <div id="result-info" style="display: none;">
+                <h3>测试结果</h3>
+                <p>通过测试用例: <span id="passed-count">0</span> / <span id="total-count">0</span></p>
+                <div id="complexity-result"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let token = localStorage.getItem('token');
+
+        async function loadProblem() {
+            const path = window.location.pathname;
+            const problemId = path.split('/')[2];
+            
+            const response = await fetch(`${API_BASE}/problems/${problemId}`);
+            const problem = await response.json();
+            
+            document.getElementById('problem-title').textContent = problem.title;
+            
+            const difficulty = document.getElementById('problem-difficulty');
+            difficulty.textContent = problem.difficulty;
+            difficulty.className = `difficulty ${problem.difficulty === '简单' ? 'easy' : problem.difficulty === '中等' ? 'medium' : 'hard'}`;
+            
+            document.getElementById('problem-description').textContent = problem.description;
+            document.getElementById('input-format').textContent = problem.input_format;
+            document.getElementById('output-format').textContent = problem.output_format;
+            document.getElementById('constraints').textContent = problem.constraints;
+            
+            if (problem.time_complexity) {
+                document.getElementById('complexity-info').style.display = 'block';
+                document.getElementById('time-complexity').textContent = problem.time_complexity;
+                document.getElementById('space-complexity').textContent = problem.space_complexity;
+            }
+            
+            const sampleInputs = document.getElementById('sample-inputs');
+            problem.sample_inputs.forEach((input, idx) => {
+                const div = document.createElement('div');
+                div.className = 'sample-box';
+                div.innerHTML = `<strong>样例 ${idx + 1}:</strong><br>${input}`;
+                sampleInputs.appendChild(div);
+            });
+            
+            const sampleOutputs = document.getElementById('sample-outputs');
+            problem.sample_outputs.forEach((output, idx) => {
+                const div = document.createElement('div');
+                div.className = 'sample-box';
+                div.innerHTML = `<strong>样例 ${idx + 1}:</strong><br>${output}`;
+                sampleOutputs.appendChild(div);
+            });
+        }
+
+        async function submitCode() {
+            const path = window.location.pathname;
+            const problemId = path.split('/')[2];
+            const code = document.getElementById('code-editor').value;
+            
+            if (!token) {
+                alert('请先登录');
+                return;
+            }
+            
+            const response = await fetch(`${API_BASE}/problems/${problemId}/submit`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ problem_id: parseInt(problemId), code })
+            });
+            
+            const result = await response.json();
+            
+            const consoleDiv = document.getElementById('console');
+            consoleDiv.innerHTML = '';
+            
+            if (result.errors && result.errors.length > 0) {
+                result.errors.forEach(err => {
+                    const p = document.createElement('p');
+                    p.className = 'status-failed';
+                    p.textContent = err;
+                    consoleDiv.appendChild(p);
+                });
+            } else {
+                const p = document.createElement('p');
+                p.className = result.status === '通过' ? 'status-passed' : 'status-failed';
+                p.textContent = `状态: ${result.status}`;
+                consoleDiv.appendChild(p);
+            }
+            
+            document.getElementById('result-info').style.display = 'block';
+            document.getElementById('passed-count').textContent = result.passed;
+            document.getElementById('total-count').textContent = result.total;
+            
+            if (result.time_complexity) {
+                const complexityDiv = document.getElementById('complexity-result');
+                complexityDiv.innerHTML = `
+                    <h4>复杂度分析结果</h4>
+                    <p>时间复杂度: ${result.time_complexity}</p>
+                    <p>空间复杂度: ${result.space_complexity}</p>
+                `;
+            }
+        }
+
+        function logout() {
+            token = null;
+            localStorage.removeItem('token');
+            updateAuthUI();
+        }
+
+        async function updateAuthUI() {
+            if (token) {
+                document.getElementById('auth-buttons').style.display = 'none';
+                document.getElementById('user-info').style.display = 'flex';
+                
+                const response = await fetch(`${API_BASE}/users/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const user = await response.json();
+                    document.getElementById('username').textContent = user.username;
+                    document.getElementById('user-avatar').src = user.avatar_url || '/static/avatars/default.png';
+                }
+            } else {
+                document.getElementById('auth-buttons').style.display = 'flex';
+                document.getElementById('user-info').style.display = 'none';
+            }
+        }
+
+        document.getElementById('submit-btn').addEventListener('click', submitCode);
+        document.getElementById('logout-btn').addEventListener('click', logout);
+        
+        loadProblem();
+        updateAuthUI();
+    </script>
+</body>
+</html>

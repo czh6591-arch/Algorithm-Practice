@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>算法教程 - 算法练习平台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: white; color: #1a1a1a; }
+        header { background: #1a1a1a; padding: 1rem 5%; color: white; }
+        .nav { display: flex; justify-content: space-between; align-items: center; }
+        .nav-links { display: flex; gap: 2rem; }
+        .nav-links a { color: white; text-decoration: none; }
+        .nav-links button { background: none; border: 1px solid #6ab7ff; color: #6ab7ff; padding: 0.5rem 1rem; cursor: pointer; border-radius: 5px; }
+        .nav-links button:hover { background: #6ab7ff; color: white; }
+        .main-content { padding: 2rem 5%; }
+        .category-tabs { display: flex; gap: 1rem; margin-bottom: 2rem; }
+        .category-tab { padding: 1rem 2rem; background: #f5f5f5; border: 1px solid #ddd; cursor: pointer; font-size: 1rem; border-radius: 5px; color: #333; }
+        .category-tab.active { background: #6ab7ff; color: white; border-color: #6ab7ff; }
+        .tutorial-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 2rem; }
+        .tutorial-card { border: 1px solid #e0e0e0; padding: 1.5rem; border-radius: 10px; background: white; }
+        .tutorial-card h3 { color: #6ab7ff; margin-bottom: 1rem; }
+        .tutorial-card p { color: #666; line-height: 1.6; margin-bottom: 1rem; }
+        .tutorial-card iframe { width: 100%; height: 250px; border: none; border-radius: 5px; }
+        .user-info { display: flex; align-items: center; gap: 1rem; }
+        .avatar-small { width: 32px; height: 32px; border-radius: 50%; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="nav">
+            <div class="logo">
+                <a href="/" style="color: white; text-decoration: none;"><h1>算法练习平台</h1></a>
+            </div>
+            <div class="nav-links">
+                <a href="/">首页</a>
+                <a href="/tutorials-page">算法教程</a>
+                <a href="/profile">个人中心</a>
+                <div id="auth-buttons">
+                    <button id="login-btn">登录</button>
+                    <button id="register-btn">注册</button>
+                </div>
+                <div id="user-info" style="display: none;" class="user-info">
+                    <img id="user-avatar" class="avatar-small" src="/static/avatars/default.svg" alt="头像">
+                    <span id="username"></span>
+                    <button id="logout-btn">退出</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-content">
+        <h2 style="margin-bottom: 2rem;">算法教程</h2>
+        
+        <div class="category-tabs">
+            <button class="category-tab active" data-category="排序算法">排序算法</button>
+            <button class="category-tab" data-category="数据结构">数据结构</button>
+            <button class="category-tab" data-category="进阶算法">进阶算法</button>
+        </div>
+
+        <div class="tutorial-grid" id="tutorial-grid"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let token = localStorage.getItem('token');
+
+        async function loadTutorials(category = '排序算法') {
+            const response = await fetch(`${API_BASE}/tutorials?category=${category}`);
+            const tutorials = await response.json();
+
+            const grid = document.getElementById('tutorial-grid');
+            grid.innerHTML = tutorials.map(t => `
+                <div class="tutorial-card">
+                    <h3>${t.title}</h3>
+                    <p>${t.content}</p>
+                    <iframe src="${t.video_url}" allowfullscreen></iframe>
+                </div>
+            `).join('');
+        }
+
+        function logout() {
+            token = null;
+            localStorage.removeItem('token');
+            updateAuthUI();
+        }
+
+        async function updateAuthUI() {
+            if (token) {
+                document.getElementById('auth-buttons').style.display = 'none';
+                document.getElementById('user-info').style.display = 'flex';
+
+                const response = await fetch(`${API_BASE}/users/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const user = await response.json();
+                    document.getElementById('username').textContent = user.username;
+                    document.getElementById('user-avatar').src = user.avatar_url || '/static/avatars/default.png';
+                }
+            }
+        }
+
+        document.querySelectorAll('.category-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                loadTutorials(tab.dataset.category);
+            });
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', logout);
+
+        loadTutorials();
+        updateAuthUI();
+    </script>
+</body>
+</html>

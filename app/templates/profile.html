@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人中心 - 算法练习平台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: white; color: #1a1a1a; }
+        header { background: #1a1a1a; padding: 1rem 5%; color: white; }
+        .nav { display: flex; justify-content: space-between; align-items: center; }
+        .nav-links { display: flex; gap: 2rem; }
+        .nav-links a { color: white; text-decoration: none; }
+        .nav-links button { background: none; border: 1px solid #6ab7ff; color: #6ab7ff; padding: 0.5rem 1rem; cursor: pointer; border-radius: 5px; }
+        .nav-links button:hover { background: #6ab7ff; color: white; }
+        .main-content { padding: 2rem 5%; max-width: 800px; margin: 0 auto; }
+        .profile-card { border: 1px solid #e0e0e0; padding: 2rem; border-radius: 10px; background: white; }
+        .avatar-container { text-align: center; margin-bottom: 2rem; }
+        .avatar { width: 150px; height: 150px; border-radius: 50%; border: 3px solid #6ab7ff; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; }
+        .form-group input, .form-group textarea { width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 5px; background: #fafafa; }
+        .form-group textarea { height: 100px; resize: vertical; }
+        .upload-btn { background: #6ab7ff; color: white; padding: 0.8rem 2rem; border: none; border-radius: 5px; cursor: pointer; margin-right: 1rem; }
+        .upload-btn:hover { background: #5aa0e6; }
+        .error { color: #c62828; margin-top: 1rem; }
+        .success { color: #2e7d32; margin-top: 1rem; }
+        .user-info { display: flex; align-items: center; gap: 1rem; }
+        .avatar-small { width: 32px; height: 32px; border-radius: 50%; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="nav">
+            <div class="logo">
+                <a href="/" style="color: white; text-decoration: none;"><h1>算法练习平台</h1></a>
+            </div>
+            <div class="nav-links">
+                <a href="/">首页</a>
+                <a href="/tutorials-page">算法教程</a>
+                <a href="/profile">个人中心</a>
+                <div id="auth-buttons">
+                    <button id="login-btn">登录</button>
+                    <button id="register-btn">注册</button>
+                </div>
+                <div id="user-info" style="display: none;" class="user-info">
+                    <img id="user-avatar" class="avatar-small" src="/static/avatars/default.svg" alt="头像">
+                    <span id="username"></span>
+                    <button id="logout-btn">退出</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-content">
+        <div class="profile-card">
+            <div class="avatar-container">
+                <img id="profile-avatar" class="avatar" src="/static/avatars/default.svg" alt="头像">
+                <h2 id="profile-username"></h2>
+                <p id="profile-email"></p>
+            </div>
+
+            <div class="form-group">
+                <label>更新头像</label>
+                <input type="file" id="avatar-file" accept="image/*">
+                <button class="upload-btn" id="upload-avatar-btn">上传头像</button>
+                <p id="avatar-error" class="error"></p>
+                <p id="avatar-success" class="success"></p>
+            </div>
+
+            <div class="form-group">
+                <label>个人简介（文字输入）</label>
+                <textarea id="bio-text" placeholder="请输入个人简介..."></textarea>
+                <button class="upload-btn" id="save-bio-btn">保存简介</button>
+            </div>
+
+            <div class="form-group">
+                <label>个人简介（图片识别）</label>
+                <input type="file" id="bio-image-file" accept="image/*">
+                <button class="upload-btn" id="upload-bio-image-btn">上传图片识别文字</button>
+                <p id="bio-error" class="error"></p>
+                <p id="bio-success" class="success"></p>
+            </div>
+
+            <div class="form-group">
+                <label>当前简介</label>
+                <p id="current-bio" style="padding: 1rem; background: #f8f9fa; border-radius: 5px;"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let token = localStorage.getItem('token');
+
+        async function loadProfile() {
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+
+            const response = await fetch(`${API_BASE}/users/me`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                const user = await response.json();
+                document.getElementById('profile-username').textContent = user.username;
+                document.getElementById('profile-email').textContent = user.email;
+                document.getElementById('profile-avatar').src = user.avatar_url || '/static/avatars/default.png';
+                document.getElementById('current-bio').textContent = user.bio || '暂无简介';
+                document.getElementById('bio-text').value = user.bio || '';
+            }
+        }
+
+        async function uploadAvatar() {
+            const file = document.getElementById('avatar-file').files[0];
+            if (!file) {
+                document.getElementById('avatar-error').textContent = '请选择图片';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await fetch(`${API_BASE}/users/avatar`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                document.getElementById('avatar-success').textContent = result.message;
+                document.getElementById('avatar-error').textContent = '';
+                document.getElementById('profile-avatar').src = result.avatar_url;
+                document.getElementById('user-avatar').src = result.avatar_url;
+            } else {
+                document.getElementById('avatar-error').textContent = result.detail || '上传失败';
+                document.getElementById('avatar-success').textContent = '';
+            }
+        }
+
+        async function saveBioText() {
+            const bio = document.getElementById('bio-text').value;
+
+            const response = await fetch(`${API_BASE}/users/bio/text?bio=${encodeURIComponent(bio)}`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                document.getElementById('current-bio').textContent = result.bio;
+                alert('简介更新成功');
+            }
+        }
+
+        async function uploadBioImage() {
+            const file = document.getElementById('bio-image-file').files[0];
+            if (!file) {
+                document.getElementById('bio-error').textContent = '请选择图片';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await fetch(`${API_BASE}/users/bio`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                document.getElementById('bio-success').textContent = result.message;
+                document.getElementById('bio-error').textContent = '';
+                document.getElementById('current-bio').textContent = result.bio;
+                document.getElementById('bio-text').value = result.bio;
+            } else {
+                document.getElementById('bio-error').textContent = result.detail || '上传失败';
+                document.getElementById('bio-success').textContent = '';
+            }
+        }
+
+        function logout() {
+            token = null;
+            localStorage.removeItem('token');
+            window.location.href = '/';
+        }
+
+        async function updateAuthUI() {
+            if (token) {
+                document.getElementById('auth-buttons').style.display = 'none';
+                document.getElementById('user-info').style.display = 'flex';
+
+                const response = await fetch(`${API_BASE}/users/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const user = await response.json();
+                    document.getElementById('username').textContent = user.username;
+                    document.getElementById('user-avatar').src = user.avatar_url || '/static/avatars/default.png';
+                }
+            }
+        }
+
+        document.getElementById('upload-avatar-btn').addEventListener('click', uploadAvatar);
+        document.getElementById('save-bio-btn').addEventListener('click', saveBioText);
+        document.getElementById('upload-bio-image-btn').addEventListener('click', uploadBioImage);
+        document.getElementById('logout-btn').addEventListener('click', logout);
+
+        loadProfile();
+        updateAuthUI();
+    </script>
+</body>
+</html>
